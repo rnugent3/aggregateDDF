@@ -8,9 +8,6 @@ import (
 	"github.com/HenryGeorgist/go-statistics/statistics"
 )
 
-// 1. Parameterize a triangular distribution
-
-// 2. generate a random number u[0,1]
 func main() {
 	const seed = 54321
 	src := rand.NewSource(seed)
