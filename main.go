@@ -1,13 +1,13 @@
-package structures
+package main
 
 import (
+	"fmt"
 	"math/rand"
 
 	"github.com/HenryGeorgist/go-statistics/data"
 	"github.com/HenryGeorgist/go-statistics/statistics"
-	"github.com/USACE/go-consequences/hazards"
-	"github.com/USACE/go-consequences/paireddata"
-	"github.com/USACE/go-consequences/structures"
+
+	"os"
 )
 
 func main() {
@@ -17,13 +17,15 @@ func main() {
 
 }
 
-func aggregateTriangular(min []float64, mostLikely []float64, max []float64) statistics.TriangularDistribution {
+func aggregateTriangular(min []float64, mostLikely []float64, max []float64) string {
 
 	const seed = 54321
 	src := rand.NewSource(seed)
 	rnd := rand.New(src)
 
-	const N = 1000
+	var convergence bool = false
+	var N int64 = 1000
+
 	// aggregate non-zero distributions
 	if max[1] != 0 {
 		triDist1 := statistics.TriangularDistribution{Min: min[0], MostLikely: mostLikely[0], Max: max[0]}
@@ -31,23 +33,48 @@ func aggregateTriangular(min []float64, mostLikely []float64, max []float64) sta
 		// initialize histogram in which to store aggregated distributions
 		histogram := data.Init(1, min[0], max[1])
 		// randomly sample each distribution, store in histogram
-		for k := 0; k < N; k++ {
-			probability := rnd.Float64()
-			val1 := triDist1.InvCDF(probability)
-			val2 := triDist2.InvCDF(probability)
-			histogram.AddObservation(val1)
-			histogram.AddObservation(val2)
+		for convergence != true {
+			var k int64 = 0
+			for k < N {
+				probability := rnd.Float64()
+				val1 := triDist1.InvCDF(probability)
+				val2 := triDist2.InvCDF(probability)
+				histogram.AddObservation(val1)
+				histogram.AddObservation(val2)
+				k++
+			}
+			convergence, N = histogram.TestForConvergence(.05, .95, .95, .01) //upper confidence limit test, lower confidence limit test, confidenece, error tolerance
+			fmt.Println(fmt.Sprintf("Computed some, estimated to need %d more iterations", N))
 		}
+
+		// N is number of iterations per cycle (sometimes stay at 10 cycles)
 		// pull summary stats of aggregated sample
-		return statistics.TriangularDistribution{Min: histogram.InvCDF(0), MostLikely: histogram.InvCDF(.5), Max: histogram.InvCDF(1)}
+
+		// return statistics.TriangularDistribution{Min: histogram.InvCDF(0), MostLikely: histogram.InvCDF(.5), Max: histogram.InvCDF(1)}
+
+		// pert distribution
+		// geometric mean or median rather than 50% - view data to choose something better
+		// dump out each histogram to csv so we can view by bin for each depth
+
+		//instead of return triangular distribution, return the histogram
+
+		return histogram.String()
+
 	} else {
 		// zero-valued distributions
-		return statistics.TriangularDistribution{Min: 0, MostLikely: 0, Max: 0}
+		return "0"
 	}
 
 }
 
-func comEng() structures.OccupancyTypeStochastic {
+func comEng() {
+
+	filename := "C:\\Temp\\Richard\\HEC Research\\Go Auxiliary\\comEng.csv"
+	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer w.Close()
 
 	// 2D array of most likely content damage engineeered structures
 	contentDamageFunctionArrayMostLikely := [][]float64{
@@ -65,42 +92,20 @@ func comEng() structures.OccupancyTypeStochastic {
 		{0, 0, 8, 28, 50, 58, 65, 65, 90, 90}} //perishable
 	max := transpose(contentDamageFunctionArrayMax)
 
-	structurexs := []float64{-1, -0.5, 0, 0.5, 1, 2, 3, 5, 7, 10}
-	structureydists := make([]statistics.ContinuousDistribution, 10)
-	structureydists[0] = statistics.TriangularDistribution{Min: 0, MostLikely: 0, Max: 0}
-	structureydists[1] = statistics.TriangularDistribution{Min: 0, MostLikely: 0, Max: 0}
-	structureydists[2] = statistics.TriangularDistribution{Min: 0, MostLikely: 5, Max: 9}
-	structureydists[3] = statistics.TriangularDistribution{Min: 5, MostLikely: 10, Max: 17}
-	structureydists[4] = statistics.TriangularDistribution{Min: 12, MostLikely: 20, Max: 27}
-	structureydists[5] = statistics.TriangularDistribution{Min: 18, MostLikely: 30, Max: 36}
-	structureydists[6] = statistics.TriangularDistribution{Min: 28, MostLikely: 35, Max: 43}
-	structureydists[7] = statistics.TriangularDistribution{Min: 33, MostLikely: 40, Max: 48}
-	structureydists[8] = statistics.TriangularDistribution{Min: 43, MostLikely: 53, Max: 60}
-	structureydists[9] = statistics.TriangularDistribution{Min: 48, MostLikely: 58, Max: 69}
-	contentxs := []float64{-1, -0.5, 0, 0.5, 1, 2, 3, 5, 7, 10}
-	contentydists := make([]statistics.ContinuousDistribution, 10)
-	for i := 0; i < len(contentxs); i++ {
-		contentydists[i] = aggregateTriangular(min[i], mostLikely[i], max[i])
+	for i := 0; i < len(mostLikely); i++ {
+		w.WriteString(aggregateTriangular(min[i], mostLikely[i], max[i]))
 	}
-	var structuredamagefunctionStochastic = paireddata.UncertaintyPairedData{Xvals: structurexs, Yvals: structureydists}
-	var contentdamagefunctionStochastic = paireddata.UncertaintyPairedData{Xvals: contentxs, Yvals: contentydists}
 
-	sm := make(map[hazards.Parameter]interface{})
-	var sdf = structures.DamageFunctionFamilyStochastic{DamageFunctions: sm}
-
-	cm := make(map[hazards.Parameter]interface{})
-	var cdf = structures.DamageFunctionFamilyStochastic{DamageFunctions: cm}
-	//Default hazard.
-	sdf.DamageFunctions[hazards.Default] = structuredamagefunctionStochastic
-	cdf.DamageFunctions[hazards.Default] = contentdamagefunctionStochastic
-	//Depth Hazard
-	sdf.DamageFunctions[hazards.Depth] = structuredamagefunctionStochastic
-	cdf.DamageFunctions[hazards.Depth] = contentdamagefunctionStochastic
-
-	return structures.OccupancyTypeStochastic{Name: "comEng", StructureDFF: sdf, ContentDFF: cdf}
 }
 
-func comNonEng() structures.OccupancyTypeStochastic {
+func comNonEng() {
+
+	filename := "C:\\Temp\\Richard\\HEC Research\\Go Auxiliary\\comNonEng.csv"
+	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer w.Close()
 
 	// 2D array of most likely content damage engineeered structures
 	contentDamageFunctionArrayMostLikely := [][]float64{
@@ -118,39 +123,9 @@ func comNonEng() structures.OccupancyTypeStochastic {
 		{0, 0, 10, 35, 54, 65, 84, 95, 99, 100}} //perishable
 	max := transpose(contentDamageFunctionArrayMax)
 
-	structurexs := []float64{-1, -0.5, 0, 0.5, 1, 2, 3, 5, 7, 10}
-	structureydists := make([]statistics.ContinuousDistribution, 10)
-	structureydists[0] = statistics.TriangularDistribution{Min: 0, MostLikely: 0, Max: 0}
-	structureydists[1] = statistics.TriangularDistribution{Min: 0, MostLikely: 0, Max: 10}
-	structureydists[2] = statistics.TriangularDistribution{Min: 0, MostLikely: 5, Max: 15}
-	structureydists[3] = statistics.TriangularDistribution{Min: 5, MostLikely: 12, Max: 20}
-	structureydists[4] = statistics.TriangularDistribution{Min: 10, MostLikely: 20, Max: 30}
-	structureydists[5] = statistics.TriangularDistribution{Min: 15, MostLikely: 28, Max: 42}
-	structureydists[6] = statistics.TriangularDistribution{Min: 20, MostLikely: 35, Max: 55}
-	structureydists[7] = statistics.TriangularDistribution{Min: 28, MostLikely: 45, Max: 65}
-	structureydists[8] = statistics.TriangularDistribution{Min: 35, MostLikely: 55, Max: 75}
-	structureydists[9] = statistics.TriangularDistribution{Min: 40, MostLikely: 60, Max: 78}
-	contentxs := []float64{-1, -0.5, 0, 0.5, 1, 2, 3, 5, 7, 10}
-	contentydists := make([]statistics.ContinuousDistribution, 10)
-	for i := 0; i < len(contentxs); i++ {
-		contentydists[i] = aggregateTriangular(min[i], mostLikely[i], max[i])
+	for i := 0; i < len(mostLikely); i++ {
+		w.WriteString(aggregateTriangular(min[i], mostLikely[i], max[i]))
 	}
-	var structuredamagefunctionStochastic = paireddata.UncertaintyPairedData{Xvals: structurexs, Yvals: structureydists}
-	var contentdamagefunctionStochastic = paireddata.UncertaintyPairedData{Xvals: contentxs, Yvals: contentydists}
-
-	sm := make(map[hazards.Parameter]interface{})
-	var sdf = structures.DamageFunctionFamilyStochastic{DamageFunctions: sm}
-
-	cm := make(map[hazards.Parameter]interface{})
-	var cdf = structures.DamageFunctionFamilyStochastic{DamageFunctions: cm}
-	//Default hazard.
-	sdf.DamageFunctions[hazards.Default] = structuredamagefunctionStochastic
-	cdf.DamageFunctions[hazards.Default] = contentdamagefunctionStochastic
-	//Depth Hazard
-	sdf.DamageFunctions[hazards.Depth] = structuredamagefunctionStochastic
-	cdf.DamageFunctions[hazards.Depth] = contentdamagefunctionStochastic
-
-	return structures.OccupancyTypeStochastic{Name: "comNonEng", StructureDFF: sdf, ContentDFF: cdf}
 
 }
 
