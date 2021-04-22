@@ -15,6 +15,7 @@ import (
 // finished/unfinished basements (uniform?)
 func main() {
 	commercialContentCurve()
+	commericalStructureCurve()
 }
 
 func aggregateTriangular(min []float64, mostLikely []float64, max []float64) string {
@@ -94,7 +95,7 @@ func aggregateTriangular(min []float64, mostLikely []float64, max []float64) str
 }
 
 func commercialContentCurve() {
-	filename := "/Users/rxjxnx3x/Dropbox/USACE Employment/HEC/Code inputs/commercialContents.csv" // fix thiis
+	filename := "/Users/rxjxnx3x/Dropbox/USACE Employment/HEC/Code inputs/commercialContents.csv"
 	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		panic(err)
@@ -127,66 +128,32 @@ func commercialContentCurve() {
 	}
 }
 
-func comEng() {
-
-	filename := "C:\\Temp\\Richard\\HEC Research\\Go Auxiliary\\comEng.csv"
+func commericalStructureCurve() {
+	filename := "/Users/rxjxnx3x/Dropbox/USACE Employment/HEC/Code inputs/commercialStructure.csv"
 	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		panic(err)
 	}
 	defer w.Close()
-
 	// 2D array of most likely content damage engineeered structures
-	contentDamageFunctionArrayMostLikely := [][]float64{
-		{0, 0, 5, 18, 35, 39, 43, 47, 70, 75}, //non-perishable
-		{0, 0, 5, 18, 35, 39, 43, 47, 70, 75}} //perishable
-	mostLikely := transpose(contentDamageFunctionArrayMostLikely)
+	structureDamageFunctionArrayMostLikely := [][]float64{
+		{0, 0, 5, 10, 20, 30, 35, 40, 53, 58}, // engineered
+		{0, 0, 5, 12, 20, 28, 35, 45, 55, 60}} // non-engineered
+	mostLikely := transpose(structureDamageFunctionArrayMostLikely)
 	// 2D array of minimum content damage engineered structures
-	contentDamageFunctionArrayMin := [][]float64{
-		{0, 0, 0, 4, 10, 22, 27, 33, 44, 48}, //non-perishable
-		{0, 0, 0, 5, 17, 28, 37, 43, 50, 50}} //perishable
-	min := transpose(contentDamageFunctionArrayMin)
+	structureDamageFunctionArrayMin := [][]float64{
+		{0, 0, 0, 5, 12, 18, 28, 33, 43, 48}, // engineered
+		{0, 0, 0, 5, 10, 15, 20, 28, 35, 40}} // non-engineered
+	min := transpose(structureDamageFunctionArrayMin)
 	// 2D array of maximum content damage engineered structures
-	contentDamageFunctionArrayMax := [][]float64{
-		{0, 0, 5, 15, 22, 35, 44, 50, 55, 70}, //non-perishable
-		{0, 0, 8, 28, 50, 58, 65, 65, 90, 90}} //perishable
-	max := transpose(contentDamageFunctionArrayMax)
+	structureDamageFunctionArrayMax := [][]float64{
+		{0, 0, 9, 17, 27, 36, 43, 48, 60, 69},   // engineered
+		{0, 10, 15, 20, 30, 42, 55, 65, 75, 78}} // non-engineered
+	max := transpose(structureDamageFunctionArrayMax)
 
 	for i := 0; i < len(mostLikely); i++ {
 		w.WriteString(aggregateTriangular(min[i], mostLikely[i], max[i]))
 	}
-
-}
-
-func comNonEng() {
-
-	filename := "C:\\Temp\\Richard\\HEC Research\\Go Auxiliary\\comNonEng.csv"
-	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
-	if err != nil {
-		panic(err)
-	}
-	defer w.Close()
-
-	// 2D array of most likely content damage engineeered structures
-	contentDamageFunctionArrayMostLikely := [][]float64{
-		{0, 0, 1, 8, 12, 18, 25, 39, 50, 60},  //non-perishable
-		{0, 0, 2, 15, 30, 42, 64, 71, 80, 87}} //perishable
-	mostLikely := transpose(contentDamageFunctionArrayMostLikely)
-	// 2D array of minimum content damage engineered structures
-	contentDamageFunctionArrayMin := [][]float64{
-		{0, 0, 0, 3, 7, 13, 20, 30, 40, 45}, //non-perishable
-		{0, 0, 0, 5, 9, 15, 23, 30, 35, 41}} //perishable
-	min := transpose(contentDamageFunctionArrayMin)
-	// 2D array of maximum content damage engineered structures
-	contentDamageFunctionArrayMax := [][]float64{
-		{0, 0, 4, 18, 28, 38, 49, 64, 72, 90},   //non-perishable
-		{0, 0, 10, 35, 54, 65, 84, 95, 99, 100}} //perishable
-	max := transpose(contentDamageFunctionArrayMax)
-
-	for i := 0; i < len(mostLikely); i++ {
-		w.WriteString(aggregateTriangular(min[i], mostLikely[i], max[i]))
-	}
-
 }
 
 func transpose(slice [][]float64) [][]float64 {
