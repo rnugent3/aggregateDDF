@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
+	"strconv"
 
 	"github.com/HydrologicEngineeringCenter/go-statistics/data"
 	"github.com/HydrologicEngineeringCenter/go-statistics/statistics"
@@ -16,6 +18,54 @@ import (
 func main() {
 	commercialContentCurve()
 	commericalStructureCurve()
+	res1BigWave()
+	res1Freshwater()
+	res1MediumWave()
+	res1Saltwater()
+	res2BigWave()
+	res2Freshwater()
+	res2MediumWave()
+	res2Saltwater()
+}
+
+func aggregateUniform(min float64, max float64) string {
+	const seed = 54321
+	src := rand.NewSource(seed)
+	rnd := rand.New(src)
+
+	var convergence bool = false
+	var N int64 = 1000
+	if max != 0 {
+		if min != max {
+			uniDist1 := statistics.UniformDistribution{Min: min, Max: max}
+			uniDist2 := statistics.TriangularDistribution{Min: min, Max: max}
+			// initialize histogram in which to store aggregated distributions
+			histogram := data.Init(1, min, max)
+			// randomly sample each distribution, store in histogram
+			for convergence != true {
+				var k int64 = 0
+				for k < N {
+					probability := rnd.Float64()
+					val1 := uniDist1.InvCDF(probability)
+					val2 := uniDist2.InvCDF(probability)
+					histogram.AddObservation(val1)
+					histogram.AddObservation(val2)
+					k++
+				}
+				convergence, N = histogram.TestForConvergence(.05, .95, .95, .01) //upper confidence limit test, lower confidence limit test, confidenece, error tolerance
+				fmt.Println(fmt.Sprintf("Computed some, estimated to need %d more iterations", N))
+			}
+
+			return histogram.String()
+		} else {
+			f := strconv.FormatFloat(min, 'f', -1, 64)
+			return f + ","
+		}
+
+	} else {
+		// zero-valued distributions
+		return "0"
+	}
 }
 
 func aggregateTriangular(min []float64, mostLikely []float64, max []float64) string {
@@ -125,6 +175,135 @@ func commercialContentCurve() {
 
 	for i := 0; i < len(mostLikely); i++ {
 		w.WriteString(aggregateTriangular(min[i], mostLikely[i], max[i]))
+	}
+}
+
+func res1Freshwater() {
+	filename := "/Users/rxjxnx3x/Dropbox/USACE Employment/HEC/Code inputs/res1Freshwater.csv"
+	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer w.Close()
+	unfinished := []float64{0, 0, 3, 5, 14, 27, 35, 39, 44, 48, 53, 56, 59, 62, 64, 66, 68, 69, 71, 73, 74}
+	finished := []float64{0, 0, 13, 15, 24, 37, 45, 49, 54, 58, 63, 66, 69, 72, 74, 76, 78, 79, 81, 83, 84}
+	for i := 0; i < len(finished); i++ {
+		min := math.Min(unfinished[i], finished[i])
+		max := math.Max(unfinished[i], finished[i])
+		w.WriteString(aggregateUniform(min, max))
+	}
+
+}
+
+func res1Saltwater() {
+	filename := "/Users/rxjxnx3x/Dropbox/USACE Employment/HEC/Code inputs/res1Saltwater.csv"
+	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer w.Close()
+	unfinished := []float64{0, 0, 5, 7, 16, 34, 43, 49, 56, 61, 68, 71, 76, 80, 82, 84, 86, 89, 91, 93, 94}
+	finished := []float64{0, 0, 15, 17, 26, 44, 53, 59, 66, 71, 78, 81, 86, 90, 92, 94, 96, 99, 100, 100, 100}
+	for i := 0; i < len(finished); i++ {
+		min := math.Min(unfinished[i], finished[i])
+		max := math.Max(unfinished[i], finished[i])
+		w.WriteString(aggregateUniform(min, max))
+	}
+}
+
+func res1MediumWave() {
+	filename := "/Users/rxjxnx3x/Dropbox/USACE Employment/HEC/Code inputs/res1MediumWave.csv"
+	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer w.Close()
+	unfinished := []float64{8, 9, 13, 16, 29, 44, 53, 60, 67, 74, 80, 84, 89, 92, 93, 95, 96, 97, 98, 99, 100}
+	finished := []float64{8, 9, 18, 21, 34, 49, 58, 65, 72, 79, 85, 89, 94, 97, 98, 100, 100, 100, 100, 100, 100}
+	for i := 0; i < len(finished); i++ {
+		min := math.Min(unfinished[i], finished[i])
+		max := math.Max(unfinished[i], finished[i])
+		w.WriteString(aggregateUniform(min, max))
+	}
+}
+
+func res1BigWave() {
+	filename := "/Users/rxjxnx3x/Dropbox/USACE Employment/HEC/Code inputs/res1BigWave.csv"
+	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer w.Close()
+	unfinished := []float64{16, 18, 20, 25, 43, 55, 63, 71, 78, 87, 91, 97, 100, 100, 100, 100, 100, 100, 100, 100, 100}
+	finished := []float64{16, 18, 20, 25, 43, 55, 63, 71, 78, 87, 91, 97, 100, 100, 100, 100, 100, 100, 100, 100, 100}
+	for i := 0; i < len(finished); i++ {
+		min := math.Min(unfinished[i], finished[i])
+		max := math.Max(unfinished[i], finished[i])
+		w.WriteString(aggregateUniform(min, max))
+	}
+}
+
+func res2Freshwater() {
+	filename := "/Users/rxjxnx3x/Dropbox/USACE Employment/HEC/Code inputs/res2Freshwater.csv"
+	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer w.Close()
+	unfinished := []float64{0, 0, 2, 3, 9, 20, 25, 29, 32, 35, 39, 41, 44, 46, 47, 49, 50, 51, 53, 54, 55}
+	finished := []float64{0, 0, 12, 13, 19, 30, 35, 39, 42, 45, 49, 51, 54, 56, 57, 59, 60, 61, 63, 64, 65}
+	for i := 0; i < len(finished); i++ {
+		min := math.Min(unfinished[i], finished[i])
+		max := math.Max(unfinished[i], finished[i])
+		w.WriteString(aggregateUniform(min, max))
+	}
+}
+
+func res2Saltwater() {
+	filename := "/Users/rxjxnx3x/Dropbox/USACE Employment/HEC/Code inputs/res2Saltwater.csv"
+	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer w.Close()
+	unfinished := []float64{0, 0, 5, 7, 11, 25, 32, 36, 41, 45, 50, 53, 56, 59, 61, 63, 64, 66, 68, 69, 70}
+	finished := []float64{0, 0, 15, 17, 21, 35, 42, 46, 51, 55, 60, 63, 66, 69, 71, 73, 74, 76, 78, 79, 80}
+	for i := 0; i < len(finished); i++ {
+		min := math.Min(unfinished[i], finished[i])
+		max := math.Max(unfinished[i], finished[i])
+		w.WriteString(aggregateUniform(min, max))
+	}
+}
+
+func res2MediumWave() {
+	filename := "/Users/rxjxnx3x/Dropbox/USACE Employment/HEC/Code inputs/res2MediumWave.csv"
+	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer w.Close()
+	unfinished := []float64{6, 7, 11, 14, 23, 38, 50, 60, 70, 77, 79, 81, 82, 84, 84, 85, 86, 87, 88, 89, 89}
+	finished := []float64{6, 7, 16, 19, 28, 43, 55, 65, 75, 82, 84, 86, 87, 89, 89, 90, 91, 92, 93, 94, 94}
+	for i := 0; i < len(finished); i++ {
+		min := math.Min(unfinished[i], finished[i])
+		max := math.Max(unfinished[i], finished[i])
+		w.WriteString(aggregateUniform(min, max))
+	}
+}
+
+func res2BigWave() {
+	filename := "/Users/rxjxnx3x/Dropbox/USACE Employment/HEC/Code inputs/res2BigWave.csv"
+	w, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer w.Close()
+	unfinished := []float64{12, 14, 16, 21, 35, 51, 68, 84, 98, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100}
+	finished := []float64{12, 14, 16, 21, 35, 51, 68, 84, 98, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100}
+	for i := 0; i < len(finished); i++ {
+		min := math.Min(unfinished[i], finished[i])
+		max := math.Max(unfinished[i], finished[i])
+		w.WriteString(aggregateUniform(min, max))
 	}
 }
 
